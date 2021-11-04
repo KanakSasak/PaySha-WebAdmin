@@ -108,7 +108,8 @@ function Dashboard() {
                 <div>{user?.email}</div>
                 <div>{dataServer?.data?.data?.phone}</div>
                 <div>-------------------------</div>
-                <div><h3>Balance {balance?.data}</h3></div>
+                <h3>Balance</h3>
+                <h1>{balance?.data}</h1>
                 <div>-------------------------</div>
                 <div><h4>wallet id : </h4></div>
                 <div></div>
