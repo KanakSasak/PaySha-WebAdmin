@@ -70,8 +70,9 @@ function Dashboard() {
                 'Authorization': `Bearer ` + dataServer.data.token
             }
         }).then((response) => {
-            setStatusTrx(response.data);
+            //setStatusTrx(response.data);
             setLoading(false)
+            GetBalance()
         });
 
 
@@ -84,8 +85,9 @@ function Dashboard() {
                 'Authorization': `Bearer ` + dataServer.data.token
             }
         }).then((response) => {
-            setStatusTrx(response.data);
+            //setStatusTrx(response.data);
             setLoading(false)
+            GetBalance()
         });
 
 
@@ -194,7 +196,9 @@ function Dashboard() {
                 <button className="dashboard__btn" onClick={logout}>
                     Logout
                 </button>
+                <div>*it's mvp maybe contains bugs</div>
             </div>
+
         </div>
     );
 }
