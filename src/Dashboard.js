@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { useHistory } from "react-router";
+import React, {useEffect, useState} from "react";
+import {useAuthState} from "react-firebase-hooks/auth";
+import {useHistory} from "react-router";
 import "./Dashboard.css";
-import {auth, db, logout, signInWithEmailAndPassword} from "./firebase";
+import {auth, logout} from "./firebase";
 import axios from "axios";
 import QRCode from "react-qr-code";
+import { Spinner } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 const client = axios.create({
@@ -19,83 +21,104 @@ function Dashboard() {
     const [amount1, setAmount1] = useState("");
     const [amount2, setAmount2] = useState("");
     const [balance, setBalance] = useState("");
+    const [statusTrx, setStatusTrx] = useState("");
     const [QR, setQR] = useState("default");
     const [dataServer, setDataServer] = useState("");
+    const [isLoading, setLoading] = useState(false)
     const history = useHistory();
 
 
-    const GetToken = async () => {
-        try {
+    async function LoginToBackend(idtoken) {
+        const response = await client.post("/v1/cust/auth/login", {
 
-        } catch (err) {
-            console.error(err);
-            alert("An error occured while fetching user data");
-        }
-    };
+            "code": idtoken,
+            "device_id": "123",
+            "device_type": "123",
+            "phone": user?.phoneNumber,
+            "signing_method": "phone",
+            "token_fcm": "123456"
 
-
-            async function LoginToBackend(idtoken) {
-                const response = await client.post("/v1/cust/auth/login",{
-
-                    "code": idtoken,
-                    "device_id": "123",
-                    "device_type": "123",
-                    "phone": user?.phoneNumber,
-                    "signing_method": "phone",
-                    "token_fcm": "123456"
-
-                });
-                setDataServer(response.data);
-                console.log(dataServer);
-                console.log(idtoken);
-            }
+        });
+        setDataServer(response.data);
+        console.log(dataServer);
+        console.log(idtoken);
+        setLoading(false)
+    }
 
     async function GetBalance() {
-        const response = await client.get("/v1/cust/get/wallet/balance",{
+        setLoading(true)
+        client.get("/v1/cust/get/wallet/balance", {
             headers: {
-                'Authorization': `Bearer `+dataServer.data.token
+                'Authorization': `Bearer ` + dataServer.data.token
             }
-        })
-        setBalance(response.data);
+        }).then((response) => {
+            setBalance(response.data);
+            SetQR();
+            setLoading(false)
+        });
+
+
+
 
     }
 
-    async function Transfer(idtujuan,amount) {
-        const response = await client.post("/v1/cust/bayar/"+idtujuan+"/"+amount+"",{},{
+
+    async function Transfer(idtujuan, amount) {
+        setLoading(true)
+        client.post("/v1/cust/bayar/" + idtujuan + "/" + amount + "", {}, {
             headers: {
-                'Authorization': `Bearer `+dataServer.data.token
+                'Authorization': `Bearer ` + dataServer.data.token
             }
-        })
-        setBalance(response.data);
+        }).then((response) => {
+            setStatusTrx(response.data);
+            setLoading(false)
+        });
+
 
     }
 
     async function Minting(amount) {
-        const response = await client.post("/v1/cust/mint/"+amount+"",{},{
+        setLoading(true)
+        client.post("/v1/cust/mint/" + amount + "", {}, {
             headers: {
-                'Authorization': `Bearer `+dataServer.data.token
+                'Authorization': `Bearer ` + dataServer.data.token
             }
-        })
-        setBalance(response.data);
+        }).then((response) => {
+            setStatusTrx(response.data);
+            setLoading(false)
+        });
+
 
     }
 
+    async function SetQR() {
+        if (dataServer?.data?.data?.wallet) {
+            setQR(dataServer?.data?.data?.wallet)
+        } else {
+            setQR("default")
+        }
 
-
+    }
 
 
     useEffect(() => {
         if (loading) return;
         if (!user) return history.replace("/");
-        user.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+        setLoading(true)
+        user.getIdToken(/* forceRefresh */ true).then(function (idToken) {
             // Send token to your backend via HTTPS
             setToken(idToken)
             LoginToBackend(idToken);
             // ...
-        }).catch(function(error) {
+        }).catch(function (error) {
             // Handle error
         });
-        setQR(dataServer?.data?.data?.wallet)
+        SetQR();
+        if (dataServer?.data?.data?.wallet) {
+            setQR(dataServer?.data?.data?.wallet)
+        } else {
+            setQR("default")
+        }
 
 
     }, [user, loading]);
@@ -103,6 +126,18 @@ function Dashboard() {
     return (
         <div className="dashboard">
             <div className="dashboard__container">
+
+                {isLoading ? (
+                    <div>
+                        <Spinner animation="grow" variant="primary"/>
+                    </div>
+                    ):(
+                        <div></div>
+                )}
+
+
+
+                <div>{statusTrx}</div>
                 Logged in as
                 <div>{name}</div>
                 <div>{user?.email}</div>
@@ -113,7 +148,7 @@ function Dashboard() {
                 <div>-------------------------</div>
                 <div><h4>wallet id : </h4></div>
                 <div></div>
-                <QRCode value={QR} />
+                <QRCode value={QR}/>
                 <div>-------------------------</div>
                 <div></div>
                 <input
@@ -147,14 +182,14 @@ function Dashboard() {
                 />
                 <button
                     className="login__btn"
-                    onClick={() => Minting(tujuan, amount2)}
+                    onClick={() => Minting(amount2)}
                 >
                     Minting
                 </button>
                 <div>-------------------------</div>
                 <div></div>
                 <button className="dashboard__btn" onClick={GetBalance}>
-                    Update Balance
+                    Update Balance & Refresh QR
                 </button>
                 <button className="dashboard__btn" onClick={logout}>
                     Logout
